@@ -42,6 +42,8 @@ public class Strings {
     public static final String VIEW_LIVE_ANONYMOUSLY = "View live anonymously";
     public static final String DISABLE_TYPING_STATUS = "Disable typing status";
     public static final String DISABLE_SCREENSHOT_DETECTION = "Disable screenshot detection";
+    public static final String DISABLE_FLAG_SECURE = "Disable FLAG_SECURE";
+    public static final String DISABLE_FLAG_SECURE_DESC = "Allows screenshots and screen recording on protected screens";
     public static final String VIEW_DM_ANONYMOUSLY = "View direct messages anonymously";
 
     public static final String CATEGORY_DISTRACTION_FREE = "Distraction free";

@@ -63,6 +63,10 @@ public class SettingsStatus {
     public static void disableScreenshotDetection() {
         disableScreenshotDetection = true;
     }
+    public static boolean disableFlagSecure = false;
+    public static void disableFlagSecure() {
+        disableFlagSecure = true;
+    }
     public static boolean disableTypingStatus = false;
     public static void disableTypingStatus() {
         disableTypingStatus = true;
@@ -72,7 +76,7 @@ public class SettingsStatus {
         viewDmAnonymously = true;
     }
     public static boolean ghostSection() {
-        return (viewStoriesAnonymously || viewLiveAnonymously || disableScreenshotDetection || disableTypingStatus || viewDmAnonymously);
+        return (viewStoriesAnonymously || viewLiveAnonymously || disableScreenshotDetection || disableFlagSecure || disableTypingStatus || viewDmAnonymously);
     }
 
     public static boolean disableStories = false;
