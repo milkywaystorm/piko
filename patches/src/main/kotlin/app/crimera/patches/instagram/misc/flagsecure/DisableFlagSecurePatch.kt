@@ -7,7 +7,7 @@
  * must retain this copyright notice and the piko attribution
  * in the source code and version control history.
  */
-+
+
 package app.crimera.patches.instagram.misc.flagsecure
 
 import app.crimera.patches.instagram.links.interceptUriPatch
