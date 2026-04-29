@@ -16,8 +16,11 @@ import app.crimera.patches.instagram.utils.Constants.COMPATIBILITY_INSTAGRAM
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.smali.ExternalLabel
+import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 
 internal object FlagSecureManagerFingerprint : Fingerprint(
     strings = listOf("Inconsistency in window FLAG_SECURE state detected!"),
@@ -33,44 +36,39 @@ val disableFlagSecurePatch =
         compatibleWith(COMPATIBILITY_INSTAGRAM)
 
         execute {
-            val bypassSmali = """
-                ${Constants.PREF_CALL_DESCRIPTOR}->disableScreenshotDetection()Z
-                move-result v0
-                if-eqz v0, :original
-                return-void
-            """.trimIndent()
+            FlagSecureManagerFingerprint.classDef.methods.forEach { method ->
+                method.apply {
+                    // Find all invoke-virtual instructions that call Window.setFlags
+                    val setFlagsInstructions =
+                        instructions.filter {
+                            it.opcode == Opcode.INVOKE_VIRTUAL &&
+                                it is ReferenceInstruction &&
+                                it.reference.toString().contains("Landroid/view/Window;->setFlags(II)V")
+                        }.toList()
 
-            // Neuter the central FLAG_SECURE manager's consistency-check method.
-            // This class uses reference counting via WeakHashMap to track which components
-            // requested FLAG_SECURE. It re-applies the flag if it detects a mismatch.
-            FlagSecureManagerFingerprint.method.apply {
-                addInstructionsWithLabels(
-                    0,
-                    bypassSmali,
-                    ExternalLabel("original", getInstruction(0)),
-                )
-            }
+                    // Iterate in reverse so index insertions don't shift upcoming targets
+                    setFlagsInstructions.reversed().forEach { instruction ->
+                        val index = instruction.location.index
 
-            // Neuter the set and remove methods in the same manager class.
-            // These are the (Window, String) methods that add/remove FLAG_SECURE
-            // references for the reference-counting system.
-            FlagSecureManagerFingerprint.classDef.methods
-                .filter { method ->
-                    method != FlagSecureManagerFingerprint.method &&
-                        method.returnType == "V" &&
-                        method.parameterTypes.isNotEmpty() &&
-                        method.parameterTypes[0] == "Landroid/view/Window;" &&
-                        method.implementation != null
-                }
-                .forEach { method ->
-                    method.apply {
+                        // Inject the condition RIGHT BEFORE the setFlags call
                         addInstructionsWithLabels(
-                            0,
-                            bypassSmali,
-                            ExternalLabel("original", getInstruction(0)),
+                            index,
+                            """
+                            ${Constants.PREF_CALL_DESCRIPTOR}->disableScreenshotDetection()Z
+                            move-result v0
+                            if-eqz v0, :skip_setflags
+                            """.trimIndent(),
+                        )
+
+                        // Inject the landing label RIGHT AFTER the setFlags call
+                        addInstructionsWithLabels(
+                            index + 1,
+                            ":skip_setflags",
+                            ExternalLabel("skip_setflags", getInstruction(index + 1)),
                         )
                     }
                 }
+            }
         }
     }
 
