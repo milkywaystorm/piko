@@ -93,6 +93,7 @@ val disableScreenshotDetection =
             // Neuter other void methods in the same class that operate on Window.
             FlagSecureManagerFingerprint.classDef.methods
                 .filter { method ->
+                    method.name != "<init>" &&
                     method != FlagSecureManagerFingerprint.method &&
                         method.returnType == "V" &&
                         method.parameterTypes.isNotEmpty() &&
