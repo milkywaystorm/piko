@@ -13,7 +13,6 @@ package app.crimera.patches.instagram.misc.privacy
 import app.crimera.patches.instagram.misc.settings.settingsPatch
 import app.crimera.patches.instagram.utils.Constants
 import app.crimera.patches.instagram.utils.Constants.COMPATIBILITY_INSTAGRAM
-import app.crimera.patches.instagram.utils.Constants.PREF_DESCRIPTOR
 import app.crimera.patches.instagram.utils.enableSettings
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
@@ -43,7 +42,6 @@ val disableScreenshotDetection =
         compatibleWith(COMPATIBILITY_INSTAGRAM)
 
         execute {
-
             // Thanks to MyInsta.
             ScreenshotDetectorFingerprint.apply {
                 val strIndex = stringMatches[0].index
@@ -63,9 +61,9 @@ val disableScreenshotDetection =
                     addInstructionsWithLabels(
                         index,
                         """
-                        invoke-static {}, $PREF_DESCRIPTOR->disableScreenshotDetection()Z
-                        move-result v$freeRegister
-                        if-nez v$freeRegister, :piko
+                        invoke-static {}, ${Constants.PREF_DESCRIPTOR}->disableScreenshotDetection()Z
+                        move-result v${freeRegister}
+                        if-nez v${freeRegister}, :piko
                         """.trimIndent(),
                         ExternalLabel("piko", nextConstInstruction),
                     )
@@ -74,6 +72,7 @@ val disableScreenshotDetection =
                 }
             }
 
+            // === START MERGED FLAG_SECURE LOGIC ===
             val bypassSmali = """
                 ${Constants.PREF_CALL_DESCRIPTOR}->disableScreenshotDetection()Z
                 move-result v0
@@ -81,7 +80,6 @@ val disableScreenshotDetection =
                 return-void
             """.trimIndent()
 
-            // Neuter the central FLAG_SECURE manager's consistency-check method.
             FlagSecureManagerFingerprint.method.apply {
                 addInstructionsWithLabels(
                     0,
@@ -89,5 +87,24 @@ val disableScreenshotDetection =
                     ExternalLabel("original", getInstruction(0)),
                 )
             }
+
+            FlagSecureManagerFingerprint.classDef.methods
+                .filter { method ->
+                    method != FlagSecureManagerFingerprint.method &&
+                        method.returnType == "V" &&
+                        method.parameterTypes.isNotEmpty() &&
+                        method.parameterTypes[0] == "Landroid/view/Window;" &&
+                        method.implementation != null
+                }
+                .forEach { method ->
+                    method.apply {
+                        addInstructionsWithLabels(
+                            0,
+                            bypassSmali,
+                            ExternalLabel("original", getInstruction(0)),
+                        )
+                    }
+                }
+            // === END MERGED FLAG_SECURE LOGIC ===
         }
     }
