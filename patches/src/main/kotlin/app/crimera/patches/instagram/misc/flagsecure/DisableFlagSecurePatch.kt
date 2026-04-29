@@ -49,8 +49,9 @@ val disableFlagSecurePatch =
                     // Iterate in reverse so index insertions don't shift upcoming targets
                     setFlagsInstructions.reversed().forEach { instruction ->
                         val index = instruction.location.index
+                        val skipTarget = getInstruction(index + 1)
 
-                        // Inject the condition RIGHT BEFORE the setFlags call
+                        // Inject the condition and pass the ExternalLabel in the EXACT SAME call
                         addInstructionsWithLabels(
                             index,
                             """
@@ -58,13 +59,7 @@ val disableFlagSecurePatch =
                             move-result v0
                             if-eqz v0, :skip_setflags
                             """.trimIndent(),
-                        )
-
-                        // Inject the landing label RIGHT AFTER the setFlags call
-                        addInstructionsWithLabels(
-                            index + 1,
-                            ":skip_setflags",
-                            ExternalLabel("skip_setflags", getInstruction(index + 1)),
+                            ExternalLabel("skip_setflags", skipTarget),
                         )
                     }
                 }
