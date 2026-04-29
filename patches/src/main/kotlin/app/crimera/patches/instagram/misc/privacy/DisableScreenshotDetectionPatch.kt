@@ -11,6 +11,7 @@
 package app.crimera.patches.instagram.misc.privacy
 
 import app.crimera.patches.instagram.misc.settings.settingsPatch
+import app.crimera.patches.instagram.utils.Constants
 import app.crimera.patches.instagram.utils.Constants.COMPATIBILITY_INSTAGRAM
 import app.crimera.patches.instagram.utils.Constants.PREF_DESCRIPTOR
 import app.crimera.patches.instagram.utils.enableSettings
@@ -25,6 +26,10 @@ import com.android.tools.smali.dexlib2.Opcode
 
 internal object ScreenshotDetectorFingerprint : Fingerprint(
     strings = listOf("ig_android_story_screenshot_directory", "screenshot_detector"),
+)
+
+internal object FlagSecureManagerFingerprint : Fingerprint(
+    strings = listOf("Inconsistency in window FLAG_SECURE state detected!"),
 )
 
 // Thanks to MyInsta
@@ -68,5 +73,40 @@ val disableScreenshotDetection =
                     enableSettings("disableScreenshotDetection")
                 }
             }
+
+            val bypassSmali = """
+                ${Constants.PREF_CALL_DESCRIPTOR}->disableScreenshotDetection()Z
+                move-result v0
+                if-eqz v0, :original
+                return-void
+            """.trimIndent()
+
+            // Neuter the central FLAG_SECURE manager's consistency-check method.
+            FlagSecureManagerFingerprint.method.apply {
+                addInstructionsWithLabels(
+                    0,
+                    bypassSmali,
+                    ExternalLabel("original", getInstruction(0)),
+                )
+            }
+
+            // Neuter other void methods in the same class that operate on Window.
+            FlagSecureManagerFingerprint.classDef.methods
+                .filter { method ->
+                    method != FlagSecureManagerFingerprint.method &&
+                        method.returnType == "V" &&
+                        method.parameterTypes.isNotEmpty() &&
+                        method.parameterTypes[0] == "Landroid/view/Window;" &&
+                        method.implementation != null
+                }
+                .forEach { method ->
+                    method.apply {
+                        addInstructionsWithLabels(
+                            0,
+                            bypassSmali,
+                            ExternalLabel("original", getInstruction(0)),
+                        )
+                    }
+                }
         }
     }
