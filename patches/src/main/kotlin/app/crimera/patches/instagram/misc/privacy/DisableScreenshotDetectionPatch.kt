@@ -10,6 +10,7 @@
 
 package app.crimera.patches.instagram.misc.privacy
 
+import app.crimera.patches.instagram.links.interceptUriPatch
 import app.crimera.patches.instagram.misc.settings.settingsPatch
 import app.crimera.patches.instagram.utils.Constants
 import app.crimera.patches.instagram.utils.Constants.COMPATIBILITY_INSTAGRAM
@@ -38,7 +39,7 @@ val disableScreenshotDetection =
         name = "Disable screenshot detection",
         description = "Disables screenshots detection in DM",
     ) {
-        dependsOn(settingsPatch)
+        dependsOn(settingsPatch, interceptUriPatch)
         compatibleWith(COMPATIBILITY_INSTAGRAM)
 
         execute {
