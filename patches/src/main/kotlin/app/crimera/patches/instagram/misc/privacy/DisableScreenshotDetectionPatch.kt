@@ -89,25 +89,5 @@ val disableScreenshotDetection =
                     ExternalLabel("original", getInstruction(0)),
                 )
             }
-
-            // Neuter other void methods in the same class that operate on Window.
-            FlagSecureManagerFingerprint.classDef.methods
-                .filter { method ->
-                    method.name != "<init>" &&
-                    method != FlagSecureManagerFingerprint.method &&
-                        method.returnType == "V" &&
-                        method.parameterTypes.isNotEmpty() &&
-                        method.parameterTypes[0] == "Landroid/view/Window;" &&
-                        method.implementation != null
-                }
-                .forEach { method ->
-                    method.apply {
-                        addInstructionsWithLabels(
-                            0,
-                            bypassSmali,
-                            ExternalLabel("original", getInstruction(0)),
-                        )
-                    }
-                }
         }
     }
